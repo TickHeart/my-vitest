@@ -1,1 +1,4 @@
-export const a = 1
+import { run } from './run'
+export * from './suite'
+export { assert, should, expect } from 'chai'
+run()
