@@ -1,0 +1,30 @@
+{
+  "name": "my-vitest",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch"
+  },
+  "keywords": [],
+  "author": "my-vitest",
+  "license": "MIT",
+  "homepage": "https://github.com/TickHeart/my-vitest#readme",
+  "bugs": {
+    "url": "https://github.com/TickHeart/my-vitest/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TickHeart/my-vitest"
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "^0.25.2",
+    "eslint": "^8.18.0",
+    "tsup": "^6.1.2",
+    "typescript": "^4.7.4"
+  },
+  "dependencies": {
+    "chai": "^4.3.6"
+  }
+}
