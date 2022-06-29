@@ -1,81 +1,108 @@
 import fg from 'fast-glob'
-import c from 'picocolors'
 import { context } from './context'
-import { defaultSuite } from './suite'
-import type { File, Suite, Task, TaskResult } from './types'
-const { log } = console
+import { DefaultReporter } from './default'
+import { clearContext, defaultSuite } from './suite'
+import type { File, Reporter, RunnerContext, Suite, Task } from './types'
+
 export async function run() {
   const rootDir = process.cwd()
 
-  const files = await fg(['**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'], {
+  const paths = await fg(['**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'], {
     cwd: rootDir,
     absolute: true,
     ignore: ['**/node_modules/**', '**/dist/**'],
   })
 
+  const reporter: Reporter = new DefaultReporter()
+  reporter.onStart({})
+
+  const files = await collectFiles(paths)
+
+  const ctx: RunnerContext = {
+    files,
+    mode: isOnlyMode(files) ? 'only' : 'all',
+    userOptions: {},
+    reporter,
+  }
+
+  await reporter.onCollected?.(ctx)
+
   for (const file of files)
-    await runFile(file)
-}
-async function runFile(filepath: string) {
-  const file = await parseFile(filepath)
-  for (const [suite, tasks] of file.tasks) {
-    let indent = 1
-    if (suite.name) {
-      log(suite.name)
-      indent += 1
-    }
-
-    const result = await runTasks(tasks)
-    for (const r of result) {
-      if (r.error === undefined) {
-        log(`${' '.repeat(indent * 2)}${c.inverse(c.green(' PASS '))} ${c.green(r.task.name)}`)
-      }
-      else {
-        console.error(`${' '.repeat(indent * 2)}${c.inverse(c.red(' FAIL '))} ${c.red(r.task.name)}`)
-        console.error(' '.repeat((indent + 2) * 2) + c.red(String(r.error)))
-        process.exitCode = 1
-      }
-    }
-    if (suite.name)
-      indent -= 1
-  }
+    await runFile(file, ctx)
 }
 
-export async function parseFile(filepath: string) {
-  await import(filepath)
-  const suites = [defaultSuite, ...context.suites]
+async function collectFiles(paths: string[]) {
+  const result: File[] = []
 
-  const tasks = await Promise.all(suites.map(async (suite) => {
-    context.currentSuite = suite
-    return [suite, await suite.collect()] as [Suite, Task[]]
-  }))
+  for (const filepath of paths) {
+    clearContext()
+    await import(filepath)
+    const collectors = [defaultSuite, ...context.suites]
 
-  const file: File = {
-    filepath,
-    suites,
-    tasks,
+    const suites: Suite[] = []
+
+    const file: File = {
+      filepath,
+      suites: [],
+    }
+
+    for (const c of collectors) {
+      // 执行 describe 里面所有的 test 收集测试用例
+      context.currentSuite = c
+      suites.push(await c.collect(file))
+    }
+
+    file.suites = suites
+
+    result.push(file)
   }
 
-  file.tasks.forEach(([, tasks]) =>
-    tasks.forEach(task => task.file = file),
+  return result
+}
+
+function isOnlyMode(files: File[]) {
+  return !!files.find(
+    file => file.suites.find(
+      suite => suite.mode === 'only' || suite.tasks.find(t => t.mode === 'only'),
+    ),
   )
-
-  return file
 }
 
-async function runTasks(tasks: Task[]) {
-  const results: TaskResult[] = []
-  for (const task of tasks) {
-    const result: TaskResult = { task }
+async function runFile(file: File, ctx: RunnerContext) {
+  const { reporter } = ctx
+
+  await reporter.onFileBegin?.(file, ctx)
+  for (const suite of file.suites) {
+    await reporter.onSuiteBegin?.(suite, ctx)
+
+    for (const t of suite.tasks)
+      await runTask(t, ctx)
+    await reporter.onSuiteEnd?.(suite, ctx)
+  }
+  await reporter.onFileEnd?.(file, ctx)
+}
+
+async function runTask(task: Task, ctx: RunnerContext) {
+  const { reporter } = ctx
+  await reporter.onTaskBegin?.(task, ctx)
+
+  if (task.suite.mode === 'skip' || task.mode === 'skip') {
+    task.status = 'skip'
+  }
+  else if (task.suite.mode === 'todo' || task.mode === 'todo') {
+    task.status = 'todo'
+  }
+  else {
     try {
       await task.fn()
+      task.status = 'pass'
     }
     catch (e) {
-      result.error = e
+      task.status = 'fail'
+      task.error = e
     }
-    results.push(result)
   }
 
-  return results
+  await reporter.onTaskEnd?.(task, ctx)
 }
 

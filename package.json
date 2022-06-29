@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "tsup",
-    "dev": "tsup --watch"
+    "dev": "esno src/index.ts"
   },
   "keywords": [],
   "author": "my-vitest",
@@ -31,6 +31,8 @@
   "dependencies": {
     "chai": "^4.3.6",
     "fast-glob": "^3.2.11",
+    "ora": "^6.1.2",
+    "perf_hooks": "^0.0.1",
     "picocolors": "^1.0.0"
   }
 }
