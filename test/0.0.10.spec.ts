@@ -20,3 +20,19 @@ describe('describe1', () => {
   it.todo('it4 记得测试昂')
 })
 
+describe.skip('describe2', () => {
+  it('it1', () => {
+    expect(1).eq(2)
+  })
+
+  it('it2', () => {
+    expect(1).eq(1)
+  })
+
+  it.skip('it3', () => {
+    expect(1).eq(4)
+  })
+
+  it.todo('it4 记得测试昂')
+})
+
