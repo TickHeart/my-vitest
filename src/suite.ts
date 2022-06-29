@@ -76,7 +76,6 @@ function createSuiteCollector(mode: RunMode, name: string, factory?: TestFactory
     return suite
   }
 
-  context.currentSuite = collector
   context.suites.push(collector)
 
   return collector
