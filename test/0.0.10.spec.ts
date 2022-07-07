@@ -1,5 +1,8 @@
 import { describe, expect, it } from '../src/index'
 
+it('default1', () => {
+  expect(1).eq(1)
+})
 describe('describe1', () => {
   it('it1', () => {
     expect(1).eq(2)
@@ -30,9 +33,5 @@ describe.skip('describe2', () => {
   })
 
   it.todo('it4 记得测试昂')
-})
-
-it('default1', () => {
-  expect(1).eq(1)
 })
 
